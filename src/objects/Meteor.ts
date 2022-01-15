@@ -6,6 +6,7 @@ export default class Meteor extends Phaser.GameObjects.Sprite {
         this.setScale(1.5)
        this.createAnims()
        this.scene=scene;
+       this.rotation=Phaser.Math.Between(0,Phaser.Math.PI2)
     //    this.anims.play('explo')
 		
 	}
