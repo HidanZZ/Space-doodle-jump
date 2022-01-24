@@ -19,6 +19,7 @@ export default class Demo extends Phaser.Scene {
   scoreCounter:Phaser.Time.TimerEvent;
   score:number = 0;
   scoreText:Phaser.GameObjects.Text;
+  jumpText:Phaser.GameObjects.Text;
   error:Phaser.GameObjects.Text;
   gameoverText:Phaser.GameObjects.Text;
   gameOver:boolean = false;
@@ -37,10 +38,8 @@ export default class Demo extends Phaser.Scene {
   }
   init(data:any=null){
     this.username=localStorage.getItem('username')
-    // console.log(this.isEmpty({score:0}));
     this.data=data
     if (!this.isEmpty(data)) {
-      console.log('ddd');
       
       let high=localStorage.getItem('highscore')
       if (high) {
@@ -63,7 +62,6 @@ export default class Demo extends Phaser.Scene {
     
     this.highscoreButton=this.add.image(config.scale.width-30,20,'high').setScale(2).setInteractive({ useHandCursor: true }).on('pointerdown',()=>{
       if (this.highscoreVisible) {
-        console.log('sss');
         
         this.tweens.add({
           targets: this.highscoreContainer,
@@ -127,16 +125,23 @@ export default class Demo extends Phaser.Scene {
    
     this.input.keyboard.on('keydown', (event) => {
       if(event.code=='Space'){
-        console.log(this.gameOver);
 
-        
-        if (!this.started && !this.highscoreVisible) {
+          
+        if (!this.started && !this.highscoreVisible && !this.gameOver) {
         
           this.start()
+        }else if(this.gameOver){
+          this.inputCheck()
+        }else{
+          this.slime.jump2()
         }
         if (this.gameOver) {
-          this.inputCheck()
-       
+         
+   
+        }
+        if (this.started) {
+          
+            
           
         }
       }
@@ -156,7 +161,7 @@ export default class Demo extends Phaser.Scene {
   
   }
   inputCheck () {
-    var letterNumber = /.*\B@(?=\w{5,64}\b)[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*.*/;
+    var letterNumber = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
    if (this.username) {
     this.cameras.main.fadeOut(1000, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -164,12 +169,11 @@ export default class Demo extends Phaser.Scene {
     });
    }else{
     if (this.uinput?.value.trim() === "") {
-      this.showError('username cannot be empty')
+      this.showError('Email cannot be empty')
   } else if (!this.uinput?.value.match(letterNumber)) {
-      this.showError('invalid telegram username')
+      this.showError('invalid email')
   } else {
       // if (error) error.destroy()
-      console.log('sss');
       
       localStorage.setItem('username', this.uinput.value.trim())
        this.cameras.main.fadeOut(1000, 0, 0, 0);
@@ -202,6 +206,7 @@ export default class Demo extends Phaser.Scene {
     fontSize:'10px',
     color:'white'}
     ).setOrigin(0)
+    
     this.slime=new Slime(this,200,50,this.input.keyboard.createCursorKeys());
     this.add.existing(this.slime)
     this.physics.add.existing(this.slime)
@@ -210,7 +215,11 @@ export default class Demo extends Phaser.Scene {
     let rect=this.add.rectangle(-20,0,config.scale.width*2,1,0xff0000,0).setDepth(99).setOrigin(0,0)
     this.physics.add.existing(rect,true)
     this.physics.add.collider(this.slime,rect)
-    
+    this.jumpText=this.add.text(30,20,`JUMPS : ${this.slime.getJumpTimes()}`,{ 
+      fontFamily:'kong', 
+    fontSize:'10px',
+    color:'white'}
+    ).setOrigin(0)
     // this.slime.body.setCollideWorldBounds(true)
     // this.slime.body.onWorldBounds = true;
 
@@ -218,7 +227,6 @@ export default class Demo extends Phaser.Scene {
     //   if (this.slime.y+this.slime.height>this.physics.world.bounds.bottom) {
     //     this.slime.body.setCollideWorldBounds(false)
     //   }
-    //     // console.log(,this.slime.y+this.slime.height/2,this.slime.height);
         
     // })
     this.scoreCounter = this.time.addEvent({
@@ -229,12 +237,19 @@ export default class Demo extends Phaser.Scene {
       callbackScope: this,
       loop: true,
   });
-    this.physics.add.overlap(this.slime, this.platformGroup, (s, s1) => {
+   let collider= this.physics.add.overlap(this.slime, this.platformGroup, (s, s1) => {
       if (s.body.touching.down && s1.body.touching.up && s.isFalling())
                   {
                     s1.explode();
                     s.jump()
                   }
+      if (!(s.body.touching.down && s1.body.touching.up)) {
+          collider.active=false
+          this.started=false
+          s.destroy()
+          this.stopGame()
+          this.gameOver = true;
+      }
       
   });
   this.started=true
@@ -253,16 +268,20 @@ export default class Demo extends Phaser.Scene {
       if(!this.gameOver)this.platformSpawner()
       if (this.started) {
         this.scoreText.setText(`SCORE: ${this.score}`);
+        this.jumpText.setText(`JUMPS: ${this.slime.getJumpTimes()}`);
 
         this.scoreText.x = config.scale.width - this.scoreText.width - 50;
         if (this.slime.y>config.scale.height && !this.gameOver) {
-          console.log('dead');
           this.stopGame()
           this.gameOver = true;
 
           
           
         }
+        this.slime.body.setGravityY(100+(Math.floor(this.score/100)*20))
+        this.platformGroup.getChildren().forEach(m=>{
+          m.body.setVelocityX(-100-(Math.floor(this.score/100)*10))
+        })
       }
   }
   stopGame(){
@@ -285,7 +304,7 @@ export default class Demo extends Phaser.Scene {
       yoyo: false
       })
       if (!this.username) {
-        this.userInput = this.add.dom(config.scale.width/2,700).createFromHTML('<input class="playerInput" type="text" placeholder="username" name="player">').setDepth(66).setOrigin(0.5);
+        this.userInput = this.add.dom(config.scale.width/2,700).createFromHTML('<input class="playerInput" type="text" placeholder="Email" name="player">').setDepth(66).setOrigin(0.5);
         this.uinput = document.querySelector('input');
         
         this.uinput?.addEventListener('input',()=>{
@@ -322,9 +341,10 @@ export default class Demo extends Phaser.Scene {
         this.physics.add.existing(platform);
         
         platform.body.setImmovable();
-        platform.body.setVelocityX(100 * -1);
-        platform.body.setSize(platform.width*0.8,1)
-        platform.body.setOffset(0,5)
+        platform.body.setVelocityX(-100);
+        
+        platform.body.setSize(platform.width*0.7,platform.height*0.65)
+        // platform.body.setOffset(0,5)
         this.platformGroup.add(platform);
         
     }
@@ -338,13 +358,11 @@ platformSpawner() {
     let minDistance = config.scale.width;
     
     this.platformGroup.getChildren().forEach((platform,i) => {
-      // console.log('here');
       minDistance= config.scale.width;
         const platformDistance = minDistance - platform.x ;
         if (platformDistance < minDistance) {
             minDistance = platformDistance;
         }
-        // console.log(i);
         
         if (platform.x < -platform.width / 2) {
             this.platformGroup.killAndHide(platform);
@@ -357,7 +375,7 @@ platformSpawner() {
 
         let platformRandomHeight;
        
-        platformRandomHeight = Phaser.Math.Between(40, 340);
+        platformRandomHeight = Phaser.Math.Between(50, 350);
       
 
         this.addPlatform(config.scale.width + nextPlatformWidth / 2, platformRandomHeight);

@@ -6,12 +6,14 @@ export default class Slime extends Phaser.GameObjects.Sprite {
     start: number;
     end: number;
     init: number=-150;
+    jumpTimes: number;
 	constructor(scene, x, y,cursor) {
 		super(scene, x, y, 'slime');
         this.setDepth(99)
        this.createAnims()
        this.cursor=cursor;
        this.start=y
+       this.jumpTimes=1
     //    this.anims.play('explo')
 		
 	}
@@ -19,12 +21,12 @@ export default class Slime extends Phaser.GameObjects.Sprite {
         super.preUpdate(t,dt);
         if (this.cursor.left.isDown && this.x>0)
         {
-            this.body.setVelocityX(-100);
+            this.body.setVelocityX(-200);
             this.flipX=true;
         }
         else if (this.cursor.right.isDown && this.x<config.scale.width)
         {
-            this.body.setVelocityX(100);
+            this.body.setVelocityX(200);
             this.flipX=false;
         }else{
             this.body.setVelocityX(0)
@@ -37,7 +39,14 @@ export default class Slime extends Phaser.GameObjects.Sprite {
         }
         
     }
+    getJumpTimes(){
+        return this.jumpTimes
+    }
     jump(){
+        if (this.jumpTimes<3) {
+            this.jumpTimes++
+        }
+        
         this.end=this.y
         let jump=this.start? this.end-this.start:this.init
        
@@ -47,6 +56,14 @@ export default class Slime extends Phaser.GameObjects.Sprite {
         this.anims.play('jump');
         this.start=this.y + (jump>0? jump*-1:jump)
        
+    }
+    jump2(){
+        if (this.jumpTimes>0) {
+            
+            this.body.setVelocityY(-300)
+            this.jumpTimes--
+        }
+        
     }
     isFalling(){
         return this.body.velocity.y>0
